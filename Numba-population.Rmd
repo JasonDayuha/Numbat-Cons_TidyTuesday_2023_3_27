@@ -1,0 +1,951 @@
+---
+title: "Beyond Survival: Enhancing Numbat Conservation through Data Analysis"
+author: "Jason A. Dayuha"
+date: "2024-01-25"
+output:  
+  html_document:
+    toc: yes
+    theme: united
+  pdf_document:
+    toc: yes
+  word_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+# 1. Introduction
+
+This analysis is part of the weekly data analysis program from Tidy Tuesday. It consists of a community of individuals that have a passion for data analytics. Each week, the community analyzes a data project, shares their findings to enhance data analysis skills, and deepen understanding of the week's subject. The goal of this projects focus is the Numbat, an endangered animal native to Australia. This data analysis project is to analyzed the Numbat's population in Australia to aid in the conservation of its declining species.
+
+# 2. Ask Guided Questions
+
+2.1 Characters and teams:
+
+&nbsp;&nbsp;&nbsp;&nbsp;● Numbat population
+
+2.2 Business task:
+The numbat data that we are analyzing will answer the following questions:
+
+&nbsp;&nbsp;&nbsp;&nbsp;● Where do you find numbats in Australia? 
+
+&nbsp;&nbsp;&nbsp;&nbsp;● Was the distribution more widespread historically? (You may need to exclude zoo reported observations.)
+
+&nbsp;&nbsp;&nbsp;&nbsp;● What time of day do numbat sightings occur?
+
+&nbsp;&nbsp;&nbsp;&nbsp;● Are they more frequent in the summer or winter?
+
+&nbsp;&nbsp;&nbsp;&nbsp;● Are numbats seen more on sunny and warm days than cloudy, wet, cold days?
+
+&nbsp;&nbsp;&nbsp;&nbsp;● Do sightings happen more on week days than weekends? 
+
+By answering these questions, we can further understand the numbat population and improve conservation of these unique animals.
+
+# 3. Preparing for Data Exploration
+
+&nbsp;&nbsp;&nbsp;&nbsp; The raw data for this analysis is found in the website [Atlas of Living Australia](https://www.ala.org.au/). However since this project is based from Tidy Tuesday, they have prepared the data for analysis to meet the specific goals in the tidytuesday project.  You can find this altered data in the Github tidytuesday link  [here ](https://github.com/rfordatascience/tidytuesday/blob/master/data/2023/2023-03-07/readme.md ).
+
+# 4. Process Data from Raw Data to Clean
+
+&nbsp;&nbsp;&nbsp;&nbsp;This analysis project will be conducted using R programming due to its free, open-source, statistical and graphical analysis capabilities. Please note to refer to the  Appendix regarding the R programming code used to accomplish the following tasks:
+
+
+4.1 Download the Libraries used to work with this data.
+
+```{r library, warning=FALSE, include=FALSE}
+#4.1 Library used installations:
+
+library ("tidytuesdayR")
+library("tidyverse")
+library("dplyr")
+library("janitor")
+library("skimr")
+library("lubridate")
+library("ggpubr")
+library("data.table")
+library("viridis")
+library("leaflet")
+library("htmlwidgets")
+library("htmltools")
+library("kableExtra")
+library("knitr")
+library("naniar")   # Install and load naniar package for missing data analysis
+library("rnoaa") #interface to NOAA (National Oceanic and Atmospheric Administration) climate and weather data.
+library("galah")
+library("here")
+library("readr")
+
+```
+
+4.2 Download the raw data 
+```{r Download_data, eval=TRUE, message=FALSE}
+
+numbats <- readr::read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-03-07/numbats.csv')
+
+```
+
+### Data Exploration
+
+4.3 Identify Column names
+```{r Column names, eval=TRUE, message=FALSE, echo=FALSE, results='asis'}
+# 4.3 Identify Column names
+column_names <- names(numbats)
+
+# Determine optimal number of columns based on total column names, ensuring more than one column if possible
+total_columns <- length(column_names)
+num_columns <- ifelse(total_columns > 1, min(3, total_columns), 1)  # Adjust '3' to set max columns
+
+# Calculate number of rows, distributing names as evenly as possible across columns
+rows_needed <- ceiling(total_columns / num_columns)
+
+# Create a matrix with the appropriate structure, filling with column names
+column_matrix <- matrix("", nrow = rows_needed, ncol = num_columns)  # Initialize with empty strings
+column_matrix[1:total_columns] <- column_names
+
+# Convert to data frame for kable
+column_names_df <- as.data.frame(column_matrix, stringsAsFactors = FALSE)
+
+# Adjusting the names of the data frame to exclude "Column 1", "Column 2", etc. headers
+names(column_names_df) <- rep("", ncol(column_names_df))
+
+# Use kable and kableExtra to generate and style the table without "Column 1", "Column 2", etc. as headers
+kable(column_names_df, caption = "List of Column Names in the numbats Data Frame", format = "html", col.names = NA) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+
+
+# Cleanup unnecessary variables
+rm(column_names, total_columns, num_columns, rows_needed, column_matrix, column_names_df)
+
+```
+
+4.3 Clean up column names for proper formatting 
+```{r clean_column, eval=TRUE, include= FALSE}
+
+# 4.3 make all column names text with proper formatting
+clean_names(numbats)
+
+
+# Rename day to YMD:
+numbats$column_name <- NULL
+
+
+numbats <- numbats %>% rename(YMD = day)
+
+```
+
+4.4 To aid in future analysis create new columns, IE: for , day , week , and (time) h:m:s by adding extra columns to the data set. 
+
+```{r new_columns,eval=TRUE, include= FALSE}
+
+
+# 4.4 Create column data for year, month , day , week ,  y/m/d , & h:m:s  . 
+
+  # Week 
+numbats$week <- format(
+  numbats$eventDate,
+  "%W"
+)
+
+# Day
+numbats$day<- format(
+  numbats$eventDate,
+  "%d"
+) 
+
+
+
+# Time of Day, HH:MM:SS
+numbats$ToD <- format(
+  numbats$eventDate,
+  "%H:%M:%S"
+  )
+
+```
+
+4.5 Check to make sure all numbers are formatted correctly.
+```{r number_format_check, eval=TRUE, include= FALSE}
+# 4.5 the following checks all columns if numeric:
+sapply(numbats ,is.numeric)
+
+# Order by date 
+numbats<-numbats %>%
+  arrange(eventDate)
+```
+
+4.6  Identify outliers in the raw data.
+```{r outliers, eval=TRUE, include= FALSE}
+
+#4.6  Identify outliers in the raw data.
+
+# Convert 'ToD' from "HH:MM:SS" format to seconds past midnight
+numbats$ToD_seconds <- hour(hms(numbats$ToD)) * 3600 + minute(hms(numbats$ToD)) * 60 + second(hms(numbats$ToD))
+
+# Check the first few rows of the new column to ensure it looks correct
+head(numbats$ToD_seconds)
+
+# Simple method using the interquartile range (IQR)
+Q1 <- quantile(numbats$numeric_column, 0.25)
+Q3 <- quantile(numbats$numeric_column, 0.75)
+IQR <- Q3 - Q1
+
+lower_bound <- Q1 - 1.5 * IQR
+upper_bound <- Q3 + 1.5 * IQR
+
+# Results show the following outliers:
+# Column: decimalLatitude - Number of outliers: 30---
+# Column: decimalLongitude - Number of outliers: 0 
+# Column: year - Number of outliers: 14 ----shows really old years 2000 and older
+# Column: hour - Number of outliers: 101 ----noting unusual
+# Column: prcp - Number of outliers: 9 -----noting unusual
+# Column: tmax - Number of outliers: 0 
+# Column: tmin - Number of outliers: 0 
+
+### there are values that are blank that needs to be converted to NA.Listing the outliers for particular column, this case decimalLatitude:
+  
+# Calculate the indices of outliers in decimalLatitude
+outliers <- which(numbats$decimalLatitude < quantile(numbats$decimalLatitude, 0.25, na.rm = TRUE) - 1.5 * IQR(numbats$decimalLatitude, na.rm = TRUE) |
+                    numbats$decimalLatitude > quantile(numbats$decimalLatitude, 0.75, na.rm = TRUE) + 1.5 * IQR(numbats$decimalLatitude, na.rm = TRUE))
+
+# Save the outliers in a new dataset instead of printing them
+numbat_outliers <- numbats[outliers, ]
+
+#clean code:
+rm(Q1, Q3, IQR, lower_bound, upper_bound, outliers)
+
+```
+
+4.7 Check the unique values of each column:
+
+For the column scientificName, the table below identified two unique entries: Myrmecobius fasciatus rufus and Myrmecobius fasciatus. The term Rufus is a subspecies of the numbat with a more reddish brownish coloration. Additionally, data regarding month, day, day of the week (wday), does contain an extra unique value due to cells with blank entry designated as "NA".
+```{r Unquie_vlalues,eval=TRUE, echo=FALSE}
+#4.7 check columns to see the number of unique values.
+
+# Initialize an empty data frame to store results
+unique_values_df <- data.frame(Column_Name = character(), Number_of_Unique_Values = integer(), stringsAsFactors = FALSE)
+
+# Iterate through each column in the numbats dataset
+for (column_name in names(numbats)) {
+  # Check if the column is of type character
+  if (is.character(numbats[[column_name]])) {
+    # Calculate the number of unique values
+    num_unique_values <- length(unique(numbats[[column_name]]))
+    # Append to the results data frame
+    unique_values_df <- rbind(unique_values_df, data.frame(Column_Name = column_name, Number_of_Unique_Values = num_unique_values))
+  }
+}
+
+
+# Determine the maximum number of unique values in any character column
+max_length <- max(sapply(numbats, function(col) if (is.character(col)) length(unique(col)) else 0))
+
+    # Create a list and add the counter column first
+list_of_unique_vals <- list(Counter = 1:max_length)
+
+# Iterate through each column to get unique values
+for (column_name in names(numbats)) {
+  if (is.character(numbats[[column_name]])) {
+    # Get unique values and adjust the length by adding NAs if necessary
+    unique_vals <- unique(numbats[[column_name]])
+    lengthened_vals <- c(unique_vals, rep(NA, max_length - length(unique_vals)))
+    list_of_unique_vals[[column_name]] <- lengthened_vals
+  }
+}
+
+# table
+kable(unique_values_df, "html") %>%
+  kableExtra::kable_classic(full_width = F) %>%
+  kable_styling(full_width = TRUE, position = "left") %>% 
+  column_spec(1, width = "3cm") %>%
+  column_spec(2, width = "3cm")
+
+
+#Results: no unusual unique values
+#cleaning
+rm( max_length, list_of_unique_vals)
+```
+
+4.8 Identify Missing or NA entry-  visualization:
+
+There are a significant portion of data missing in this dataset, as illustrated in the chart below. Approximately 92% of the data related to precipitation (prcp), maximum temperature (tmax), and minimum temperature (tmin) are absent from the 805 rows of data examined. Furthermore, the 'eventDate' column is lacking around 31 percent of its data. This absence is substantial because it affects the dataset's ability to support more detailed time-based analyses.
+
+
+
+
+```{r missing, eval=TRUE, echo= FALSE, fig.width=9, fig.height=8}
+# 4.8 Analyze patterns of missingness:
+ 
+vis_miss(numbats)
+
+# Visualize missing data patterns
+missing_percents <- sapply(numbats, function(x) mean(is.na(x))) * 100
+
+# Create a data frame for display
+missing_df <- data.frame(Column = names(missing_percents), 
+                         MissingPercentage = round(missing_percents, 2))
+
+# Display as a simple table using kable
+kable(missing_df, caption = "Percentage of Missing Values by Column") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = F)
+  
+
+# results show prcp, Tmax, Min have a lot of missing data, above 90%. Data points form 600, looks like location info is present.
+
+## Percentage of Non zero values for each column 
+# Initialize a data frame to store the counts and percentages
+counts_df <- data.frame(Column_Name = character(),
+                        Number_of_Zero_Values = integer(),
+                        Number_of_NA_Values = integer(),
+                        Percentage_NonZero_NonNA = numeric(),
+                        stringsAsFactors = FALSE)
+
+# Iterate through each column in the numbats data frame
+for (column_name in names(numbats)) {
+  total_cells <- nrow(numbats)  # Total number of cells in the column
+  zero_count <- NA  # Default to NA for non-numeric columns
+  na_count <- sum(is.na(numbats[[column_name]]))  # Count NA values for all columns
+  
+  # Check if the column is numeric for zero value counting
+  if (is.numeric(numbats[[column_name]])) {
+    zero_count <- sum(numbats[[column_name]] == 0, na.rm = TRUE)
+    non_zero_non_na <- sum(!is.na(numbats[[column_name]]) & numbats[[column_name]] != 0)  # Count non-zero, non-NA
+  } else {
+    non_zero_non_na <- sum(!is.na(numbats[[column_name]]))  # For non-numeric, just count non-NA
+  }
+  
+  # Calculate the percentage of non-zero, non-NA values
+  percentage_non_zero_non_na <- (non_zero_non_na / total_cells) * 100
+  
+  # Record the counts and percentage in the counts_df data frame
+  counts_df <- rbind(counts_df, data.frame(Column_Name = column_name,
+                                           Number_of_Zero_Values = zero_count,
+                                           Number_of_NA_Values = na_count,
+                                           Percentage_NonZero_NonNA = percentage_non_zero_non_na))
+}
+
+
+# Calculate the percentage of non-NA values for each column grouped by dataResourceName,
+# round to two decimal places, and add a column for overall row completeness also rounded to two decimal places
+data_overview <- numbats %>%
+  group_by(dataResourceName) %>%
+  summarise(across(everything(), ~round(mean(!is.na(.)) * 100, 2))) %>%
+  mutate(RowCompleteness = round(rowMeans(select(., -dataResourceName), na.rm = TRUE), 2)) %>%
+  ungroup()
+
+#------
+# Select the top 10 dataResourceName entries with the highest RowCompleteness
+top_completeness <- data_overview %>%
+  select(dataResourceName, RowCompleteness) %>%
+  arrange(desc(RowCompleteness)) %>%
+  top_n(18, RowCompleteness)
+
+# Display as a table using kable
+kable(top_completeness, caption = "Data Resources by Completeness", format = "html") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = F)
+
+#cleaning 
+#rm(missing_percents, missing_df, counts_df, data_overview)
+```
+
+
+The above table shows the organization collecting numbat sightings and the completeness of their collected information in regards to the table properties. There are 18 organization that contributed to this numbat sightings only 1 organization, Earth Guardians Weekly Feed	achieved 100.00 % completeness, following close to 97 % completeness iNaturalist Australia. 
+
+
+4.9 Find and clean  zero values if necessary :
+No unwanted "zeros" found in hour and prcp
+```{r zero, eval=TRUE, echo=FALSE}
+# 4.9 Find and clean  zero values if necessary :
+#Initialize a data frame to store the counts of zero values
+zero_counts_df <- data.frame(Column_Name = character(), Number_of_Zero_Values = integer(), stringsAsFactors = FALSE)
+
+# Iterate through each column in the numbats data frame
+for (column_name in names(numbats)) {
+  # Check if the column is numeric
+  if (is.numeric(numbats[[column_name]])) {
+    # Count the number of zero values
+    zero_count <- sum(numbats[[column_name]] == 0, na.rm = TRUE)
+    
+    # Record the count of zero values in the zero_counts_df data frame
+    zero_counts_df <- rbind(zero_counts_df, data.frame(Column_Name = column_name, Number_of_Zero_Values = zero_count))
+  }
+}
+
+kable(zero_counts_df, "html") %>%
+  kableExtra::kable_classic(full_width = F) %>%
+  kable_styling(full_width = TRUE, position = "left") %>% 
+  column_spec(1, width = "3cm") %>%
+  column_spec(2, width = "3cm")
+
+```
+
+4.10 check for leading and trailing white spaces:
+```{r white_spaces, eval=TRUE, include= FALSE, echo=FALSE}
+#4.10 check for leading and trailing white spaces:
+# check if there is any trailing spaces in any of the column in the df
+     
+      df <- numbats
+      
+      # Initialize a vector to store the sum of flagged cells for each column
+      whitespace_counts <- integer(length = ncol(df))
+      
+      # Loop through each column in the dataframe
+      for (i in seq_along(df)) {
+        # Check if the column is of type character
+        if (is.character(df[[i]])) {
+          # Flag cells with leading or trailing whitespace
+          flagged_cells <- grepl("^\\s+|\\s+$", df[[i]])
+          # Sum the flagged cells and store the result
+          whitespace_counts[i] <- sum(flagged_cells)
+          
+          # Optionally, you can also print out the results for each column
+          cat("Column:", names(df)[i], "has", whitespace_counts[i], "cells with whitespace\n")
+        }
+      }
+      
+      # Create a named vector with the counts of whitespace per column
+      whitespace_summary <- setNames(whitespace_counts[whitespace_counts != 0], names(df)[whitespace_counts != 0])
+      
+      # Print the summary
+      print(whitespace_summary)
+
+```
+
+4.11 Check and delete duplicate rows:
+```{r dupliate, eval=TRUE, include= FALSE}
+#4.11 Check and delete duplicate rows:
+# Check for duplicate rows
+duplicated_rows <- duplicated(numbats)
+print(duplicated_rows)
+
+#results show none.
+
+```
+
+# 5. Analysis
+
+The data  shows that three geographic locations of Australia has the most sightings. The largest cluster of sighting is in south west Australia near the city Perth. The next locations but substantially smaller is near the small city of  Alice Springs and lastly the city of Adelaide.
+
+
+### 5.1 Geographic Map - location sighting
+
+```{r scatterplot, eval=TRUE, warning=FALSE}
+
+# 5.1 Geographic Map - location sighting
+
+# Assuming 'numbats' is your dataset
+ggplot(numbats, aes(x = decimalLongitude, y = decimalLatitude)) +
+  geom_point(alpha = 0.5) + # Plot points with semi-transparency
+  labs(title = "Distribution of Numbat Sightings", x = "Longitude", y = "Latitude") +
+  theme_minimal() + # Use a minimal theme for the plot
+  annotate("rect", xmin = 115, xmax = 120, ymin = -35, ymax = -30, alpha = 0.2, color = "blue", fill = "blue") +
+  annotate("rect", xmin = 130, xmax = 135, ymin = -28, ymax = -26, alpha = 0.2, color = "green", fill = "green") +
+  annotate("rect", xmin = 137, xmax = 143, ymin = -35, ymax = -30, alpha = 0.2, color = "red", fill = "red") +
+  annotate("text", x = 117.5, y = -29.5, label = "Closest city Perth", color = "blue") +
+  annotate("text", x = 132.5, y = -25.5, label = "Closest city Alice Springs", color = "green") +
+  annotate("text", x = 139.5, y = -29.5, label = "Closest city Adelaide", color = "red")
+
+```
+
+
+```{r sample_size, eval=TRUE,warning=FALSE,message=FALSE}
+# Step 1: Group data by location and count observations per location
+numbats_geo <- numbats %>%
+  group_by(decimalLatitude, decimalLongitude) %>%
+  mutate(locationCount = n()) %>%
+  ungroup()
+
+# Define a function to scale the radius based on 'locationCount'
+scale_radius <- function(count) {
+  base_radius <- 5 # Base radius for a single observation
+  ifelse(count == 1, base_radius, base_radius + sqrt(count) * 2) # Example scaling
+}
+
+# Adjust function for color mapping with vectorized operation
+get_color <- function(count) {
+  # Use ifelse for vectorized conditional logic
+  ifelse(count == 1, "red",
+         colorNumeric(palette = viridis(6, option = "D"), 
+                      domain = c(log1p(2), max(log1p(numbats_geo$locationCount))))(log1p(count))
+  )
+}
+
+# Adjust the numbats_geo dataset for the coloring function
+numbats_geo$color <- get_color(numbats_geo$locationCount)
+
+# Create a map and set the initial view
+maplocation <- leaflet(numbats_geo) %>%
+  addTiles() %>%
+  setView(lat = -33.3732, lng = 132.6216, zoom = 4) %>%
+  addProviderTiles("Esri.WorldGrayCanvas")
+
+# Add markers with unified style, color-coded by 'locationCount'
+maplocation <- maplocation %>%
+  addCircleMarkers(
+    data = numbats_geo,
+    lng = ~decimalLongitude,
+    lat = ~decimalLatitude,
+    popup = ~paste("Count:", locationCount),
+    fillColor = ~color,
+    fillOpacity = 0.7,
+    color = "white",
+    radius = ~scale_radius(locationCount),
+    stroke = FALSE,
+    labelOptions = labelOptions(
+      style = list("font-weight" = "normal", padding = "3px 8px"),
+      textsize = "13px",
+      direction = "auto"
+    )
+  )
+
+# Manually set colors for the legend, including gray for 1
+labels <- c("1", "2", "3-5", "6-10", "11-15", "16-20", "21-25", ">25")
+colors <- c("red", viridis(7, option = "D")) # Ensure there's a color for each label
+
+maplocation <- maplocation %>%
+  addLegend(
+    position = "bottomright",
+    title = "Observation Count",
+    labels = labels,
+    colors = colors,
+    opacity = 1
+  )
+
+# Display the map
+maplocation
+```
+This geographic map above shows the concentration of numbat sighting in a particular location by the size of the circle as well as the color. Note the large portion of red points representing one time occurrence of numbat sighting scattered all across lower portion of Australia and none in the northen cost . Additionally this map again reveals that SW Australia has the largest concentration of sightings followed by Alice Spring  and Adelaide. 
+
+```{r geographic_map, eval=TRUE, warning= FALSE, message=FALSE, }
+# 5.2 Geographic map
+# Assuming 'numbats' is already loaded and contains the necessary columns
+numbats_geo <- numbats %>%
+  mutate(
+    eventDate = as.Date(eventDate), # Ensure eventDate is in Date format
+    dateNumeric = as.numeric(eventDate), # Convert dates to numeric scale
+    dateColor = ifelse(is.na(eventDate), "red", NA) # Special handling for NA dates
+  )
+
+# Define the color palette function using 'dateNumeric' for non-NA values
+datePalette <- colorNumeric(
+  palette = viridis(256), # Use Viridis color palette
+  domain = numbats_geo$dateNumeric[!is.na(numbats_geo$dateNumeric)], # Exclude NA dates from domain
+  na.color = "red" # Use red for NA dates
+)
+
+# Plot the data
+maplocation <- leaflet(numbats_geo) %>%
+  addTiles() %>%
+  setView(lat = -33.3732, lng = 132.6216, zoom = 4) %>%
+  addProviderTiles("Esri.WorldGrayCanvas")
+
+# Split data by numbat type and create a layer for each
+numbat_types <- unique(numbats_geo$scientificName)
+for (type in numbat_types) {
+  maplocation <- maplocation %>%
+    addCircleMarkers(
+      data = filter(numbats_geo, scientificName == type),
+      lng = ~decimalLongitude,
+      lat = ~decimalLatitude,
+      popup = ~paste("Event Date:", format(eventDate, "%Y-%m-%d"), "<br>Numbat Type:", scientificName),
+      fillColor = ~ifelse(is.na(eventDate), "red", datePalette(dateNumeric)),
+      fillOpacity = 0.7,
+      color = "white",
+      radius = 5,
+      stroke = FALSE,
+      labelOptions = labelOptions(
+        style = list("font-weight" = "normal", padding = "3px 8px"),
+        textsize = "13px",
+        direction = "auto"
+      ),
+      group = type # Assign markers to a group based on numbat type
+    )
+}
+
+# Add layers control to toggle numbat types
+maplocation <- maplocation %>%
+  addLayersControl(
+    overlayGroups = numbat_types,
+    options = layersControlOptions(collapsed = FALSE)
+  ) %>%
+  addLegend(
+    position = "bottomright",
+    title = "Date Spotted",
+    values = ~dateNumeric,
+    colors = c(viridis(5), "red"), # Example with 5 Viridis colors + red for NA
+    labels = c("Early", " ", " ", " ", "Late", "NA"), # Adjust labels as needed
+    opacity = 1
+  )
+
+maplocation
+```
+
+The geographic map and accompanying table illustrate the distribution of numbat sightings over time. The map shows  the high number of red points representing no time stamp information, roughly 31% of the total data set as revealed in the data exploration. The map shows most of the SW Australia sighting location cluster do not have time data. Alice Springs emerges as the second major area with a significant number of sightings lacking time information. 
+
+Interestingly, the map reveals that sightings of the numbat subspecies, Myrmecobius fasciatus rufus, are confined primarily to Alice Springs, with a few occurrences near Adelaide. A noteworthy detail is that the only timestamped sighting of the Myrmecobius fasciatus rufus variant near Adelaide dates back to 1856, with subsequent sightings lacking timestamps.
+```{r table_SW, eval=TRUE, warning= FALSE, message=FALSE, }
+# table SW australia sightings
+# Filter the dataset for the specified geographic range
+specified_region_sightings <- numbats %>%
+  filter(decimalLongitude >= 115 & decimalLongitude <= 120,
+         decimalLatitude >= -35 & decimalLatitude <= -30)
+
+# Calculate the count and percentage of sightings without dates
+no_date_info <- specified_region_sightings %>%
+  filter(is.na(eventDate)) %>%
+  summarise(Count = n(),
+            Percentage = round((n() / nrow(specified_region_sightings) * 100), 2)) %>%
+  mutate(Year = "NA") # Adding Year as "NA" for consistency
+
+# Calculate the count and percentage of sightings by year for those with dates
+with_date_info <- specified_region_sightings %>%
+  filter(!is.na(eventDate)) %>%
+  mutate(Year = as.character(year(as.Date(eventDate)))) %>%
+  group_by(Year) %>%
+  summarise(Count = n(),
+            Percentage = round((n() / nrow(specified_region_sightings) * 100), 2)) %>%
+  select(Year, Count, Percentage)
+
+# Combine the no-date info and with-date info into one table
+combined_info <- bind_rows(with_date_info, no_date_info) %>%
+  arrange(Year)
+
+# Adjusting detailed_info for clarity in column names
+detailed_info <- specified_region_sightings %>%
+  filter(!is.na(eventDate)) %>%
+  mutate(Year = as.character(year(as.Date(eventDate)))) %>%
+  group_by(Year, scientificName) %>%
+  summarise(Count = n(), .groups = 'drop') %>%
+  ungroup() %>%
+  complete(Year, scientificName = c("Myrmecobius fasciatus rufus", "Myrmecobius fasciatus"), fill = list(Count = 0)) %>%
+  pivot_wider(names_from = scientificName, values_from = Count, values_fill = list(Count = 0)) %>%
+  rename(`Myrmecobius fasciatus rufus Count` = `Myrmecobius fasciatus rufus`, 
+         `Myrmecobius fasciatus Count` = `Myrmecobius fasciatus`)
+
+# Join the combined info with the detailed info
+final_table <- left_join(combined_info, detailed_info, by = "Year")
+
+# Format and display the final table, adjusting for the new column names
+final_table_formatted <- kable(final_table, caption = "SW Australia Sighting Percentages by Year and Scientific Name", format = "html") %>%
+  kable_styling(full_width = TRUE, position = "left") %>%
+  column_spec(1, width = "3cm") %>%
+  column_spec(2, width = "3cm") %>%
+  column_spec(3, width = "3cm") %>%
+  kable_classic(full_width = F)
+
+# Print the formatted table
+final_table_formatted
+
+# clean uncessary variables
+rm(specified_region_sightings, no_date_info, with_date_info, combined_info, detailed_info)
+
+
+```
+
+Focusing on the table above, it highlights the SW Austrial sightings noting that 70% of the sightings in that region do not include time stamp.  It also shows an increasing trend in recorded sightings over time, particularly from 2019 onwards, when data collection efforts improved to include time stamps for sightings. 
+
+```{r table_adelaide, eval=TRUE, warning= FALSE, message=FALSE, }
+
+
+# Filter the dataset for the specified geographic range in Southwest Australia
+adelaide_region_sightings <- numbats %>%
+  filter(decimalLongitude >= 137 & decimalLongitude <= 143,
+         decimalLatitude >= -35 & decimalLatitude <= -30)
+
+# Calculate the count and percentage of sightings without dates
+no_date_sightings <- adelaide_region_sightings %>%
+  filter(is.na(eventDate)) %>%
+  summarise(Count = n(),
+            Percentage = round((n() / nrow(adelaide_region_sightings) * 100), 2)) %>%
+  mutate(Year = "NA") # Adding Year as "NA" for consistency
+
+# Calculate the count and percentage of sightings by year for those with dates
+with_date_sightings <- adelaide_region_sightings %>%
+  filter(!is.na(eventDate)) %>%
+  mutate(Year = as.character(year(as.Date(eventDate)))) %>%
+  group_by(Year) %>%
+  summarise(Count = n(),
+            Percentage = round((n() / nrow(adelaide_region_sightings) * 100), 2)) %>%
+  select(Year, Count, Percentage)
+
+# Combine the no-date sightings and with-date sightings into one table
+combined_sightings <- bind_rows(with_date_sightings, no_date_sightings) %>%
+  arrange(Year)
+
+# Adjusting for clarity in column names and ensuring sightings for both Numbat species are reflected
+species_detailed_sightings <- adelaide_region_sightings %>%
+  filter(!is.na(eventDate)) %>%
+  mutate(Year = as.character(year(as.Date(eventDate)))) %>%
+  group_by(Year, scientificName) %>%
+  summarise(Count = n(), .groups = 'drop') %>%
+  ungroup() %>%
+  complete(Year, scientificName = c("Myrmecobius fasciatus rufus", "Myrmecobius fasciatus"), fill = list(Count = 0)) %>%
+  pivot_wider(names_from = scientificName, values_from = Count, values_fill = list(Count = 0)) %>%
+  rename(`Myrmecobius fasciatus rufus Count` = `Myrmecobius fasciatus rufus`, 
+         `Myrmecobius fasciatus Count` = `Myrmecobius fasciatus`)
+
+# Join the combined sightings with the species detailed sightings
+adelaide_final_table <- left_join(combined_sightings, species_detailed_sightings, by = "Year")
+
+# Format and display the final table, adjusting for the new variable names and context
+adelaide_final_table_formatted <- kable(adelaide_final_table, caption = "Adelaide Region Numbat Sightings Percentages by Year and Scientific Name", format = "html") %>%
+  kable_styling(full_width = TRUE, position = "left") %>%
+  column_spec(1, width = "3cm") %>%
+  column_spec(2, width = "3cm") %>%
+  column_spec(3, width = "3cm") %>%
+  kable_classic(full_width = F)
+
+# Print the formatted table
+adelaide_final_table_formatted
+
+# Clean up unnecessary variables
+rm(adelaide_region_sightings, no_date_sightings, with_date_sightings, combined_sightings, species_detailed_sightings, adelaide_final_table)
+
+```
+
+The table above shows from 2008 to the present, data collection has been consistent in the region with a dip to just one sigthing in 2015. There has been only one sihting in 1856 of the variant M. fasciatus rufus in this region, the rest of the sighting is the  M. fasciatus . There are 3 sightings with no time stamp. 
+```{r central, eval=TRUE, warning=FALSE, MESSAGE=FALSE,}
+
+# Filter the dataset for the specified geographic range in Southwest Australia
+region_sightings_Central <- numbats %>%
+  filter(decimalLongitude >= 130 & decimalLongitude <= 135,
+         decimalLatitude >= -28 & decimalLatitude <= -26)
+
+# Assuming 'region_sightings_alt' is your dataframe
+region_center <- region_sightings_Central %>%
+  # Convert NA values in 'year' column to a category (e.g., "NA")
+  mutate(Year = ifelse(is.na(year), "NA", as.character(year))) %>%
+  group_by(Year, scientificName) %>%
+  summarise(Count = n(), .groups = 'drop')
+
+
+region_center_table_formatted <- kable(region_center, caption = "Central Region Numbat Sightings by Year and Scientific Name", format = "html") %>%
+  kable_styling(full_width = TRUE, position = "left") %>%
+  column_spec(1, width = "3cm") %>%
+  column_spec(2, width = "3cm") %>%
+  column_spec(3, width = "3cm") %>%
+  kable_classic(full_width = F)
+
+region_center_table_formatted
+
+rm(region_sightings_Central, region_center)
+```
+In central Australia near Alice Springs, there are 15 sightings recorded with no time stamp information included. Interesting enough the variant M. fasciatus rufus is predominantly seen in this region. 
+
+
+### 5.2 Heat Map- Time of day, Month 
+```{r heatmap, eval=TRUE, }
+#5.2 Heat Map
+
+
+# Assuming 'numbats' is your dataset and has been loaded
+heat_map_data <- numbats %>%
+  filter(!is.na(week), !is.na(hour)) %>%
+  mutate(
+    week = as.numeric(week),
+    hour = as.numeric(hour)  # Convert hour to numeric to avoid discrete to continuous scale issues
+  ) %>%
+  group_by(week, hour) %>%
+  summarise(numtrips = n(), .groups = 'drop')
+
+# Assuming the conversion of hour to numeric is acceptable for your analysis
+heatmap_plot <- ggplot(heat_map_data, aes(x = week, y = hour, fill = numtrips)) +
+  geom_tile(color = "white") +
+  scale_fill_viridis_c(name = "Numbat Sighting") +
+  scale_y_continuous(trans = 'reverse', breaks = 0:23) +  # Use continuous scale with reverse transformation
+  scale_x_continuous(
+    expand = c(0, 0),
+    breaks = seq(1, 52, by = 4.33),  # Approximate for simplicity
+    #labels = month_labels  # Ensure this variable is defined or replace with actual labels
+  ) +
+  theme_light() +
+  labs(title = "Heatmap of Activity", y = "Hour of the Day", x = "Week of the Year")
+
+# Print the heatmap
+print(heatmap_plot)
+
+```
+
+This heat map illustrates what time of year the sightings occurred,revealing significant data gaps in this annual visualization. Nevertheless, it offers valuable insights. For instance, between 60 to 80 sightings were recorded in November and December, aligning with Australia's summer months, when numbats exhibit peak activity around 1300. Additionally, the data suggests occasional nocturnal and early morning sightings around 6 am in September and October, indicating lower activity in the colder months, notably in February and July.
+
+
+### 5.3 Bar Graph- Time of day
+```{r weekdays ,eval=TRUE,fig.width=10, fig.height=7 }
+
+#5.3 Bar Graph- Time of day seen
+# Convert ToD to POSIXct and cut into 15-minute intervals
+numbats_bar <- numbats %>%
+  mutate(
+    ToD_POSIXct = as.POSIXct(ToD, format = "%H:%M:%S", tz = "UTC"),
+    time_intervals = cut(ToD_POSIXct, breaks = "15 min", labels = FALSE)
+  ) %>%
+  filter(!is.na(time_intervals)) %>%
+  group_by(time_intervals) %>%
+  summarise(numtseen = n()) %>%
+  ungroup()
+
+# Generate a data frame of all possible 15-minute intervals (96 intervals for 24 hours)
+all_intervals <- data.frame(time_intervals = 1:96)
+
+# Merge the sightings data with the complete set of intervals
+numbats_complete <- merge(all_intervals, numbats_bar, by = "time_intervals", all.x = TRUE)
+
+# Fill in missing numtseen values with zero
+numbats_complete$numtseen[is.na(numbats_complete$numtseen)] <- 0
+
+# Add time labels for plotting
+numbats_complete$time_labels <- format(seq(ymd_hms("2022-01-01 00:00:00"), 
+                                           length.out = 96, by = "15 min"), "%H:%M")
+
+# Determine a threshold for capping y-values and cap numtseen for visualization
+threshold <- 75  # Adjust this value based on your dataset and needs
+numbats_complete$plot_numtseen <- ifelse(numbats_complete$numtseen > threshold, threshold, numbats_complete$numtseen)
+
+# Plot with capped y-values and annotate if values are capped
+ggplot(numbats_complete, aes(x = as.factor(time_intervals), y = plot_numtseen)) +
+  geom_bar(stat = "identity", fill = "blue") +
+  geom_text(aes(label = ifelse(numtseen > threshold, 'Capped, max 400', '')), 
+            position = position_stack(vjust = 1), angle = 0, hjust = 0, check_overlap = TRUE, size = 2.5) +
+  scale_x_discrete(labels = numbats_complete$time_labels) +
+  labs(title = "Frequency of Numbat Sightings",
+       x = "Time of Day",
+       y = "Number of Sightings (Capped)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=0))
+
+# Cleanup unnecessary variables
+rm(numbats_bar, all_intervals, numbats_complete)
+
+```
+
+Base on this bar Graph above out of 805 data points 1230  in that period had about 400 sightings all across Australia. 1345 is the second time in the data that numbats are most seen, 30 sightings.
+
+
+### 5.4 Weather Temperature data 
+```{r temperature, eval=TRUE, warning=FALSE}
+#5.4 Temperature data and sighting relationship
+
+# Replace 'weather_data' with the name of your actual data frame
+weather_data_long <- numbats %>%
+    select(
+      tmin,
+      tmax,
+      prcp
+    )
+
+# First, we need to reshape the data to  long format
+weather_data_long <- weather_data_long %>%
+  gather(key = "TemperatureType", value = "TemperatureValue", tmax, tmin) %>%
+  # Convert temperature from Celsius to Fahrenheit
+  mutate(TemperatureValue = (TemperatureValue * 9/5) + 32)
+
+# Now create the combined histogram plot with temperatures in Fahrenheit
+ggplot(weather_data_long, aes(x = TemperatureValue, fill = TemperatureType)) +
+  geom_histogram(aes(y = ..count..), binwidth = 1.8, color = "black", alpha = 0.7) + # Adjusted binwidth for Fahrenheit
+  geom_density(alpha = .2) +
+  facet_wrap(~TemperatureType, scales = "free_x", ncol = 1) +
+  scale_fill_manual(values = c("tmax" = "orange", "tmin" = "blue")) +
+  labs(title = "Tmin & Tmax on Numbats Sightings",
+       x = "Temperature (°F)", # Updated label to Fahrenheit
+       y = "Frequency",
+       fill = "Temperature Type") +
+  theme_minimal() +
+  xlim(c(32, 104)) + # Set the x-axis limits adjusted for Fahrenheit
+  ylim(0, 10) # Set the y-axis limits
+
+# Cleanup unnecessary variable
+rm(weather_data_long)
+
+```
+
+
+In regards to weather the numbats have mostly been seen aroud 60 to 70 F in days that are the hottest. Days when it the coolest numbats are mostly seen around 40 to 50 F. This shows that numbats prefer to be in hiding during the hottest times of the day or prefer more temperate environment.
+
+
+### 5.5 Wet and Sunny Days 
+
+```{r wet_Sunny,eval=TRUE, message=FALSE}
+# 5.5 Wet and Sunny Day vs Numbat sighting
+# Filter out NA values from prcp column
+numbats_filtered <- filter(numbats, !is.na(prcp))
+
+# Categorize days as 'Sunny' or 'Wet' and count the number of rows for each category
+weather_counts <- numbats_filtered %>%
+  mutate(DayType = ifelse(prcp > 0, 'Wet', 'Sunny')) %>%
+  group_by(DayType) %>%
+  summarise(Count = n())
+
+# Create a bar graph
+ggplot(weather_counts, aes(x = DayType, y = Count, fill = DayType)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Number of Numbat Sightings on Sunny vs. Wet Days",
+       x = "Day Type",
+       y = "Number of Sightings") +
+  scale_fill_manual(values = c('Sunny' = 'gold', 'Wet' = 'dodgerblue4')) +
+  theme_minimal()
+
+
+```
+
+Numbats prefer sunny days compared to  rainy days which correspond with the heat map above where activity increases during Australian summer months prominently November and December.
+
+### 5.6 Most sighting in a week 
+
+```{r week_sighting,eval=TRUE, message=FALSE, include=TRUE }
+#5.6 Most sighting in a week 
+
+numbats_week <- numbats
+
+# Convert 'wday' in 'numbats_week' to a factor with levels in the correct order
+# This assumes 'wday' contains the abbreviated day names as strings
+numbats_week$wday <- factor(numbats_week$wday, levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"))
+
+# Filter out rows where 'wday' is NA and perform the aggregation in 'numbats_week'
+numbats_week <- numbats_week %>%
+  filter(!is.na(wday)) %>%
+  group_by(wday) %>%
+  summarise(numtrips = n())  # Count the number of rows for each 'wday'
+
+# Plotting the bar graph
+ggplot(numbats_week, aes(x = wday, y = numtrips, fill = wday)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Day of Week Most Popular for Sightings", y = "Total Number of Sightings", x = "") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Pastel1")
+
+
+
+```
+
+Numbats are mostly seen on mondays base on the data.
+
+# 6. Conclusion
+
+
+● How could your team and business apply your insights?
+
+
+Significant populations of numbats are found in SW Australia, with smaller populations cluster near Alice Springs and Perth. Understanding the specific locations of numbat sightings enables a deeper insight into their preferred habitats and informs strategies to enhance and expand these environments, contributing to population growth. 
+
+Consistent and comprehensive recording of data on numbat populations can greatly enhance historical records, facilitating effective monitoring to determine whether their numbers are increasing or decreasing. Knowing the locations of numbats can assist in further development of programs that engage the public in reporting numbat sightings, enriching the data set, and aiding scientists in their research.
+
+Monitoring numbat sightings in relations to the weather such as precipitation and temperatures allows  researchers to monitor if numbats are affected by climate change and possibly help create habitats to buffer them from further effects of climate change.
+
+Data driven polices informed by comprehensive sighting data, can support measures to safeguard numbats from habitat destruction caused by human development. Additionally, this information can assist in allocating funding towards numbat conservation efforts,to further promoting the survival and growth of their populations.
+
+● What next steps would you or your stakeholders take based on your findings?
+
+Given the significant number of sightings primarily in SW Australia, along with Alice Springs and Adelaide, it is recommended that future research and conservation efforts for the numbat population be concentrated in these areas. Research and study of the animal should be conducted on summer months of November and December around mid day 12:45 to 13:45 as they are most active during that time. Further study should be conducted predominantly during sunny days with temp around 60 to 70 F.
+
+
+● Is there additional data you could use to expand on your findings?
+
+The dataset under analysis exhibits a considerable volume of missing data, particularly regarding timestamp information. This issue likely arises from the involvement of numerous organizations in data collection, each potentially following different standards for what information to include in numbat sightings. To enhance the dataset's completeness, future data gathering efforts should prioritize the inclusion of dates and times, especially considering that 30 percent of the analyzed data lacked this information. Additionally, weather data is missing in 92 percent of the cases, highlighting a critical area for improvement.There are 18 organization that contributed to the dataset sightings, only 1 organization, Earth Guardians Weekly Feed	achieved 100% completeness, following close to 97% completeness iNaturalist Australia. This area has a lot of room for improvement.
+
+
+# 7. Appendix 
+
+```{r Appendix, ref.label = knitr::all_labels(), echo = TRUE, eval = FALSE}
+
+```
+
