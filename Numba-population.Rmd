@@ -1,7 +1,7 @@
 ---
-title: "Beyond Survival: Enhancing Numbat Conservation through Data Analysis"
+title: "Beyond Survival: Enhancing numbat Conservation through Data Analysis"
 author: "Jason A. Dayuha"
-date: "2024-01-25"
+date: "2024-03-24"
 output:  
   html_document:
     toc: yes
@@ -18,13 +18,13 @@ knitr::opts_chunk$set(echo = FALSE)
 
 # 1. Introduction
 
-This analysis is part of the weekly data analysis program from Tidy Tuesday. It consists of a community of individuals that have a passion for data analytics. Each week, the community analyzes a data project, shares their findings to enhance data analysis skills, and deepen understanding of the week's subject. The goal of this projects focus is the Numbat, an endangered animal native to Australia. This data analysis project is to analyzed the Numbat's population in Australia to aid in the conservation of its declining species.
+This analysis is part of the weekly data analysis program from Tidy Tuesday. It consists of a community of individuals that have a passion for data analytics. Each week, the community analyzes a data project, shares their findings to enhance data analysis skills, and deepen understanding of the week's subject. The goal of this projects focus is the numbat, an endangered animal native to Australia. This data analysis project is to analyzed the numbat's population in Australia to aid in the conservation of its declining species.
 
 # 2. Ask Guided Questions
 
 2.1 Characters and teams:
 
-&nbsp;&nbsp;&nbsp;&nbsp;● Numbat population
+&nbsp;&nbsp;&nbsp;&nbsp;● numbat population
 
 2.2 Business task:
 The numbat data that we are analyzing will answer the following questions:
@@ -436,7 +436,7 @@ The data  shows that three geographic locations of Australia has the most sighti
 # Assuming 'numbats' is your dataset
 ggplot(numbats, aes(x = decimalLongitude, y = decimalLatitude)) +
   geom_point(alpha = 0.5) + # Plot points with semi-transparency
-  labs(title = "Distribution of Numbat Sightings", x = "Longitude", y = "Latitude") +
+  labs(title = "Distribution of numbat Sightings", x = "Longitude", y = "Latitude") +
   theme_minimal() + # Use a minimal theme for the plot
   annotate("rect", xmin = 115, xmax = 120, ymin = -35, ymax = -30, alpha = 0.2, color = "blue", fill = "blue") +
   annotate("rect", xmin = 130, xmax = 135, ymin = -28, ymax = -26, alpha = 0.2, color = "green", fill = "green") +
@@ -547,7 +547,7 @@ for (type in numbat_types) {
       data = filter(numbats_geo, scientificName == type),
       lng = ~decimalLongitude,
       lat = ~decimalLatitude,
-      popup = ~paste("Event Date:", format(eventDate, "%Y-%m-%d"), "<br>Numbat Type:", scientificName),
+      popup = ~paste("Event Date:", format(eventDate, "%Y-%m-%d"), "<br>numbat Type:", scientificName),
       fillColor = ~ifelse(is.na(eventDate), "red", datePalette(dateNumeric)),
       fillOpacity = 0.7,
       color = "white",
@@ -672,7 +672,7 @@ with_date_sightings <- adelaide_region_sightings %>%
 combined_sightings <- bind_rows(with_date_sightings, no_date_sightings) %>%
   arrange(Year)
 
-# Adjusting for clarity in column names and ensuring sightings for both Numbat species are reflected
+# Adjusting for clarity in column names and ensuring sightings for both numbat species are reflected
 species_detailed_sightings <- adelaide_region_sightings %>%
   filter(!is.na(eventDate)) %>%
   mutate(Year = as.character(year(as.Date(eventDate)))) %>%
@@ -688,7 +688,7 @@ species_detailed_sightings <- adelaide_region_sightings %>%
 adelaide_final_table <- left_join(combined_sightings, species_detailed_sightings, by = "Year")
 
 # Format and display the final table, adjusting for the new variable names and context
-adelaide_final_table_formatted <- kable(adelaide_final_table, caption = "Adelaide Region Numbat Sightings Percentages by Year and Scientific Name", format = "html") %>%
+adelaide_final_table_formatted <- kable(adelaide_final_table, caption = "Adelaide Region numbat Sightings Percentages by Year and Scientific Name", format = "html") %>%
   kable_styling(full_width = TRUE, position = "left") %>%
   column_spec(1, width = "3cm") %>%
   column_spec(2, width = "3cm") %>%
@@ -719,7 +719,7 @@ region_center <- region_sightings_Central %>%
   summarise(Count = n(), .groups = 'drop')
 
 
-region_center_table_formatted <- kable(region_center, caption = "Central Region Numbat Sightings by Year and Scientific Name", format = "html") %>%
+region_center_table_formatted <- kable(region_center, caption = "Central Region numbat Sightings by Year and Scientific Name", format = "html") %>%
   kable_styling(full_width = TRUE, position = "left") %>%
   column_spec(1, width = "3cm") %>%
   column_spec(2, width = "3cm") %>%
@@ -751,7 +751,7 @@ heat_map_data <- numbats %>%
 # Assuming the conversion of hour to numeric is acceptable for your analysis
 heatmap_plot <- ggplot(heat_map_data, aes(x = week, y = hour, fill = numtrips)) +
   geom_tile(color = "white") +
-  scale_fill_viridis_c(name = "Numbat Sighting") +
+  scale_fill_viridis_c(name = "numbat Sighting") +
   scale_y_continuous(trans = 'reverse', breaks = 0:23) +  # Use continuous scale with reverse transformation
   scale_x_continuous(
     expand = c(0, 0),
@@ -807,7 +807,7 @@ ggplot(numbats_complete, aes(x = as.factor(time_intervals), y = plot_numtseen)) 
   geom_text(aes(label = ifelse(numtseen > threshold, 'Capped, max 400', '')), 
             position = position_stack(vjust = 1), angle = 0, hjust = 0, check_overlap = TRUE, size = 2.5) +
   scale_x_discrete(labels = numbats_complete$time_labels) +
-  labs(title = "Frequency of Numbat Sightings",
+  labs(title = "Frequency of numbat Sightings",
        x = "Time of Day",
        y = "Number of Sightings (Capped)") +
   theme_minimal() +
@@ -845,7 +845,7 @@ ggplot(weather_data_long, aes(x = TemperatureValue, fill = TemperatureType)) +
   geom_density(alpha = .2) +
   facet_wrap(~TemperatureType, scales = "free_x", ncol = 1) +
   scale_fill_manual(values = c("tmax" = "orange", "tmin" = "blue")) +
-  labs(title = "Tmin & Tmax on Numbats Sightings",
+  labs(title = "Tmin & Tmax on numbats Sightings",
        x = "Temperature (°F)", # Updated label to Fahrenheit
        y = "Frequency",
        fill = "Temperature Type") +
@@ -865,7 +865,7 @@ In regards to weather the numbats have mostly been seen aroud 60 to 70 F in days
 ### 5.5 Wet and Sunny Days 
 
 ```{r wet_Sunny,eval=TRUE, message=FALSE}
-# 5.5 Wet and Sunny Day vs Numbat sighting
+# 5.5 Wet and Sunny Day vs numbat sighting
 # Filter out NA values from prcp column
 numbats_filtered <- filter(numbats, !is.na(prcp))
 
@@ -878,7 +878,7 @@ weather_counts <- numbats_filtered %>%
 # Create a bar graph
 ggplot(weather_counts, aes(x = DayType, y = Count, fill = DayType)) +
   geom_bar(stat = "identity") +
-  labs(title = "Number of Numbat Sightings on Sunny vs. Wet Days",
+  labs(title = "Number of numbat Sightings on Sunny vs. Wet Days",
        x = "Day Type",
        y = "Number of Sightings") +
   scale_fill_manual(values = c('Sunny' = 'gold', 'Wet' = 'dodgerblue4')) +
@@ -887,7 +887,7 @@ ggplot(weather_counts, aes(x = DayType, y = Count, fill = DayType)) +
 
 ```
 
-Numbats prefer sunny days compared to  rainy days which correspond with the heat map above where activity increases during Australian summer months prominently November and December.
+numbats prefer sunny days compared to  rainy days which correspond with the heat map above where activity increases during Australian summer months prominently November and December.
 
 ### 5.6 Most sighting in a week 
 
@@ -917,7 +917,7 @@ ggplot(numbats_week, aes(x = wday, y = numtrips, fill = wday)) +
 
 ```
 
-Numbats are mostly seen on mondays base on the data.
+numbats are mostly seen on mondays base on the data.
 
 # 6. Conclusion
 
