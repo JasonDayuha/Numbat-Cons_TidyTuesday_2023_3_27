@@ -18,13 +18,13 @@ knitr::opts_chunk$set(echo = FALSE)
 
 # 1. Introduction
 
-This analysis is part of the weekly data analysis program from Tidy Tuesday. It consists of a community of individuals that have a passion for data analytics. Each week, the community analyzes a data project, shares their findings to enhance data analysis skills, and deepen understanding of the week's subject. The goal of this projects focus is the numbat, an endangered animal native to Australia. This data analysis project is to analyzed the numbat's population in Australia to aid in the conservation of its declining species.
+This analysis is part of the weekly data analysis program from Tidy Tuesday. It consists of a community of individuals that have a passion for data analytics. Each week, the community analyzes a data project, shares their findings to enhance data analysis skills, and deepen understanding of the week's subject. The goal of this projects focus is the numbat, an endangered animal native to Australia. This data analysis project is to analyzed the numbat's population in Australia and to aid in the conservation of its declining species.
 
 # 2. Ask Guided Questions
 
 2.1 Characters and teams:
 
-&nbsp;&nbsp;&nbsp;&nbsp;● numbat population
+&nbsp;&nbsp;&nbsp;&nbsp;● Numbat population
 
 2.2 Business task:
 The numbat data that we are analyzing will answer the following questions:
@@ -45,11 +45,11 @@ By answering these questions, we can further understand the numbat population an
 
 # 3. Preparing for Data Exploration
 
-&nbsp;&nbsp;&nbsp;&nbsp; The raw data for this analysis is found in the website [Atlas of Living Australia](https://www.ala.org.au/). However since this project is based from Tidy Tuesday, they have prepared the data for analysis to meet the specific goals in the tidytuesday project.  You can find this altered data in the Github tidytuesday link  [here ](https://github.com/rfordatascience/tidytuesday/blob/master/data/2023/2023-03-07/readme.md ).
+&nbsp;&nbsp;&nbsp;&nbsp; The raw data for this analysis is found in the website [Atlas of Living Australia](https://www.ala.org.au/). However since this project is based from Tidy Tuesday, they have prepared the data for analysis to meet the specific goals in the Tidy Tuesday project.  You can find this altered data in the Github Tidy Tuesday link  [here ](https://github.com/rfordatascience/tidytuesday/blob/master/data/2023/2023-03-07/readme.md ).
 
 # 4. Process Data from Raw Data to Clean
 
-&nbsp;&nbsp;&nbsp;&nbsp;This analysis project will be conducted using R programming due to its free, open-source, statistical and graphical analysis capabilities. Please note to refer to the  Appendix regarding the R programming code used to accomplish the following tasks:
+&nbsp;&nbsp;&nbsp;&nbsp;This analysis project will be conducted using R programming due to its free, open-source, statistical and graphical analysis capabilities. Please refer to the  Appendix regarding the R programming code used to accomplish the following tasks:
 
 
 4.1 Download the Libraries used to work with this data.
@@ -349,7 +349,7 @@ kable(top_completeness, caption = "Data Resources by Completeness", format = "ht
 ```
 
 
-The above table shows the organization collecting numbat sightings and the completeness of their collected information in regards to the table properties. There are 18 organization that contributed to this numbat sightings only 1 organization, Earth Guardians Weekly Feed	achieved 100.00 % completeness, following close to 97 % completeness iNaturalist Australia. 
+The table above shows the organization collecting numbat sightings and the completeness of their collected information in regards to the table properties. There are 18 organization that contributed to this numbat sightings only one organization, Earth Guardians Weekly Feed	achieved 100% data completeness, following close to 97 %completeness is iNaturalist Australia. 
 
 
 4.9 Find and clean  zero values if necessary :
@@ -424,7 +424,7 @@ print(duplicated_rows)
 
 # 5. Analysis
 
-The data  shows that three geographic locations of Australia has the most sightings. The largest cluster of sighting is in south west Australia near the city Perth. The next locations but substantially smaller is near the small city of  Alice Springs and lastly the city of Adelaide.
+The data shows that three geographic locations in Australia have the most sightings. The largest cluster of sightings is in southwest Australia near the city of Perth. The next location, though substantially smaller, is near the city of Alice Springs, and the last is near the city of Adelaide.
 
 
 ### 5.1 Geographic Map - location sighting
@@ -580,9 +580,10 @@ maplocation <- maplocation %>%
 maplocation
 ```
 
-The geographic map and accompanying table illustrate the distribution of numbat sightings over time. The map shows  the high number of red points representing no time stamp information, roughly 31% of the total data set as revealed in the data exploration. The map shows most of the SW Australia sighting location cluster do not have time data. Alice Springs emerges as the second major area with a significant number of sightings lacking time information. 
+The geographic map and accompanying table illustrate the distribution of numbat sightings over time. Note that the  number of red points represents no time stamp information in this map. No time stamp sighting consist of roughly 31% of the total data as revealed in the data exploration. The map shows most of the SW Australia sighting location cluster do not have time data. Alice Springs is the second major area with a significant number of sightings lacking time information. 
 
-Interestingly, the map reveals that sightings of the numbat subspecies, Myrmecobius fasciatus rufus, are confined primarily to Alice Springs, with a few occurrences near Adelaide. A noteworthy detail is that the only timestamped sighting of the Myrmecobius fasciatus rufus variant near Adelaide dates back to 1856, with subsequent sightings lacking timestamps.
+Interestingly, the map reveals that sightings of the numbat subspecies, Myrmecobius fasciatus rufus, are confined primarily to Alice Springs, with a few occurrences near Adelaide. A noteworthy detail is  the timestamped sighting of the Myrmecobius fasciatus rufus variant near Adelaide goes back to 1856, with subsequent sightings lacking times tamp as well.
+
 ```{r table_SW, eval=TRUE, warning= FALSE, message=FALSE, }
 # table SW australia sightings
 # Filter the dataset for the specified geographic range
@@ -642,7 +643,7 @@ rm(specified_region_sightings, no_date_info, with_date_info, combined_info, deta
 
 ```
 
-Focusing on the table above, it highlights the SW Austrial sightings noting that 70% of the sightings in that region do not include time stamp.  It also shows an increasing trend in recorded sightings over time, particularly from 2019 onwards, when data collection efforts improved to include time stamps for sightings. 
+Focusing on the table above, it highlights the sightings in SW Australia. The table shows that 70% of sightings in that region lack a timestamp. It also indicates an increasing trend in recorded sightings over time, particularly from 2019 onwards, when data collection efforts were enhanced to include timestamps for sightings.
 
 ```{r table_adelaide, eval=TRUE, warning= FALSE, message=FALSE, }
 
@@ -703,7 +704,8 @@ rm(adelaide_region_sightings, no_date_sightings, with_date_sightings, combined_s
 
 ```
 
-The table above shows from 2008 to the present, data collection has been consistent in the region with a dip to just one sigthing in 2015. There has been only one sihting in 1856 of the variant M. fasciatus rufus in this region, the rest of the sighting is the  M. fasciatus . There are 3 sightings with no time stamp. 
+The table above illustrates that data collection in the region has been consistent from 2008 to the present, although there was a notable decrease to just one sighting in 2015. Remarkably, there was only one sighting of the variant M. fasciatus rufus in 1856; all other sightings pertain to M. fasciatus. Additionally, three sightings lack timestamps
+
 ```{r central, eval=TRUE, warning=FALSE, MESSAGE=FALSE,}
 
 # Filter the dataset for the specified geographic range in Southwest Australia
@@ -730,7 +732,7 @@ region_center_table_formatted
 
 rm(region_sightings_Central, region_center)
 ```
-In central Australia near Alice Springs, there are 15 sightings recorded with no time stamp information included. Interesting enough the variant M. fasciatus rufus is predominantly seen in this region. 
+In central Australia near Alice Springs, there are 15 sightings recorded with no time stamp information Interesting enough the variant M. fasciatus rufus is predominantly seen in this region. 
 
 
 ### 5.2 Heat Map- Time of day, Month 
@@ -859,7 +861,7 @@ rm(weather_data_long)
 ```
 
 
-In regards to weather the numbats have mostly been seen aroud 60 to 70 F in days that are the hottest. Days when it the coolest numbats are mostly seen around 40 to 50 F. This shows that numbats prefer to be in hiding during the hottest times of the day or prefer more temperate environment.
+In regards to weather, the numbats have mostly been seen around 60 to 70 F in days that are the hottest. Days when it the coolest numbats are mostly seen around 40 to 50 F. This shows that numbats prefer to be in hiding during the hottest times of the day or prefer more temperate environment.
 
 
 ### 5.5 Wet and Sunny Days 
@@ -887,7 +889,7 @@ ggplot(weather_counts, aes(x = DayType, y = Count, fill = DayType)) +
 
 ```
 
-numbats prefer sunny days compared to  rainy days which correspond with the heat map above where activity increases during Australian summer months prominently November and December.
+Numbats prefer sunny days compared to  rainy days which correspond with the heat map above where activity increases during Australian summer months prominently November and December.
 
 ### 5.6 Most sighting in a week 
 
